@@ -1,0 +1,18 @@
+{
+    "configurations": [
+        {
+            "name": "PS2 Homebrew",
+            "includePath": [
+                "${env:PS2SDK}/ee/include",
+                "${env:PS2SDK}/iop/include",
+                "${env:PS2SDK}/common/include"
+            ],
+            "defines": [
+                "_EE"
+            ],
+            "compilerPath": "/usr/local/ps2dev/ee/bin/mips64r5900el-ps2-elf-gcc",
+            "intelliSenseMode": "linux-gcc-x64"
+        }
+    ],
+    "version": 4
+}
