@@ -1,0 +1,3 @@
+Oii!
+
+Essa mensagem foi escrita no Linux e agora esta sendo lida pelo PS2 <3
