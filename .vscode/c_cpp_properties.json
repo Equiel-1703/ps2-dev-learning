@@ -12,7 +12,7 @@
             "defines": [
                 "_EE"
             ],
-            "compilerPath": "${env:PS2SDK}/../ee/bin/mips64r5900el-ps2-elf-gcc",
+            "compilerPath": "${env:PS2DEV}/ee/bin/mips64r5900el-ps2-elf-gcc",
             "cStandard": "c99",
             "cppStandard": "gnu++14",
             "intelliSenseMode": "linux-gcc-x64"
