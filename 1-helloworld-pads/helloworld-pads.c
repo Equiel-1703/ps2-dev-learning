@@ -116,8 +116,16 @@ int main(int argc, char *argv[]) {
       scr_printf("You pressed X :D\n");
     }
 
+    if (new_pad & PAD_CIRCLE) {
+      scr_printf("You pressed O :D\n");
+    }
+
+    if (new_pad & PAD_SQUARE) {
+      scr_printf("You pressed |_| :D\n");
+    }
+
     if (new_pad & PAD_TRIANGLE) {
-      scr_printf("You pressed TRIANGLE. Exiting...\n");
+      scr_printf("You pressed /\\. Exiting...\n");
       break;
     }
   }
