@@ -10,9 +10,9 @@ EE_BIN = helloworld.elf
 EE_OBJS = helloworld.o
 EE_LIBS = -ldebug
 
-all: $(EE_BIN)
-
 .PHONY: all clean
+
+all: $(EE_BIN)
 
 clean:
 	rm -f $(EE_BIN) $(EE_OBJS)
