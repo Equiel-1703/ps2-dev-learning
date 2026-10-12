@@ -1,11 +1,10 @@
 #include <debug.h>
 #include <kernel.h>
+#include <iopcontrol.h>
 #include <libpad.h>
 #include <loadfile.h>
 #include <sifrpc.h>
-#include <stdio.h>
 #include <tamtypes.h>
-#include <unistd.h>
 #include <graph.h>
 
 // pad_dma_buf is provided by the user, one buf for each pad
@@ -14,11 +13,24 @@
 // IOP.
 static char padBuf[256] __attribute__((aligned(64)));
 
-void load_iop_modules() {
-  int ret;
-
-  // Initialize the Remote Procedure Call system to talk to the IOP
+static void reset_iop(void)
+{
+  // Initialize EE-side IOP communication used to request the reboot
   SifInitRpc(0);
+
+  // Keep trying until the reset request is accepted
+  while (!SifIopReset("", 0));
+
+  // Wait until the IOP has completed its reboot
+  while (!SifIopSync());
+
+  // Reestablish EE-side RPC communication with the rebooted IOP
+  SifInitRpc(0);
+}
+
+static void load_iop_modules(void)
+{
+  int ret;
 
   // Load the Serial I/O and Controller modules from the PS2's internal ROM
 
@@ -28,8 +40,8 @@ void load_iop_modules() {
   console. It handles the raw electrical timing and bit-shifting.
   */
   ret = SifLoadModule("rom0:SIO2MAN", 0, NULL);
-
-  if (ret < 0) {
+  if (ret < 0)
+  {
     scr_printf("Failed to load SIO2MAN! (%d)", ret);
     SleepThread();
   }
@@ -41,23 +53,28 @@ void load_iop_modules() {
   (translating raw electrical pulses into "Triangle was pressed").
   */
   ret = SifLoadModule("rom0:PADMAN", 0, NULL);
-
-  if (ret < 0) {
+  if (ret < 0)
+  {
     scr_printf("Failed to load PADMAN! (%d)", ret);
     SleepThread();
   }
 }
 
-int main(int argc, char *argv[]) {
+int main(void)
+{
   init_scr();
 
   scr_printf("Hello, World!\n\n");
+  scr_printf("Resetting IOP...\n");
+
+  reset_iop();
+  scr_printf("IOP reset!\n\n");
+
   scr_printf("Loading IOP modules...\n");
-
   load_iop_modules();
+  scr_printf("Modules loaded!\n\n");
 
-  scr_printf("Modules loaded!\n");
-  scr_printf("Press a button\n");
+  scr_printf("-- Press a button --\n");
 
   // Let's read controller inputs!
   int ret, old_state = -1;
@@ -65,7 +82,8 @@ int main(int argc, char *argv[]) {
   u32 paddata, old_pad = 0, new_pad;
 
   ret = padInit(0);
-  if (ret != 1) {
+  if (ret != 1)
+  {
     scr_printf("padInit failed: %d\n", ret);
     SleepThread();
   }
@@ -73,22 +91,27 @@ int main(int argc, char *argv[]) {
   // Port 0 -> Connector 1 | port 1 -> Connector 2
   // Slot = 0 if not using multitap
   ret = padPortOpen(0, 0, padBuf);
-  if (ret == 0) {
+  if (ret == 0)
+  {
     scr_printf("padOpenPort failed: %d\n", ret);
     SleepThread();
   }
 
-  while (1) {
+  while (1)
+  {
     // Wait for screen refresh
     graph_wait_vsync();
 
-    // Ask the IOP for the current status of the controller
+    // Get the current status of the controller using DMA
     ret = padGetState(0, 0);
 
     // Only read if the controller is fully connected and stable
-    while ((ret != PAD_STATE_STABLE) && (ret != PAD_STATE_FINDCTP1)) {
-      if (ret != old_state) {
-        if (ret == PAD_STATE_DISCONN) {
+    while ((ret != PAD_STATE_STABLE) && (ret != PAD_STATE_FINDCTP1))
+    {
+      if (ret != old_state)
+      {
+        if (ret == PAD_STATE_DISCONN)
+        {
           scr_printf("Pad(%d, %d) is disconnected\n", 0, 0);
         }
       }
@@ -100,40 +123,43 @@ int main(int argc, char *argv[]) {
     // Read the data into our 'buttons' struct
     ret = padRead(0, 0, &buttons);
 
-    if (ret == 0) {
+    if (ret == 0)
+    {
       scr_printf("Failed to read pads: %d\n", ret);
       continue; // Try again
     }
 
-    // Performing a not using xor to ensure bit consistencty
-    // due to 16-bit to 32-bit conversion
+    // Performing a not using xor to flip the bits
     paddata = 0xFFFF ^ buttons.btns;
     new_pad = paddata & ~old_pad;
     old_pad = paddata;
 
     // Handle button presses
-    if (new_pad & PAD_CROSS) {
-      scr_printf("You pressed X :D\n");
+    if (new_pad & PAD_CROSS)
+    {
+      scr_printf("You pressed CROSS\n");
     }
 
-    if (new_pad & PAD_CIRCLE) {
-      scr_printf("You pressed O :D\n");
+    if (new_pad & PAD_CIRCLE)
+    {
+      scr_printf("You pressed CIRCLE\n");
     }
 
-    if (new_pad & PAD_SQUARE) {
-      scr_printf("You pressed |_| :D\n");
+    if (new_pad & PAD_SQUARE)
+    {
+      scr_printf("You pressed SQUARE\n");
     }
 
-    if (new_pad & PAD_TRIANGLE) {
-      scr_printf("You pressed /\\. Exiting...\n");
+    if (new_pad & PAD_TRIANGLE)
+    {
+      scr_printf("You pressed TRIANGLE, Exiting...\n");
       break;
     }
   }
   // Wait for screen refresh
   graph_wait_vsync();
   scr_printf("\nGoing to mimir...\n");
-  
-  SleepThread();
 
+  SleepThread();
   return 0;
 }
