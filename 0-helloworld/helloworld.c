@@ -1,7 +1,7 @@
 #include <debug.h>
 #include <kernel.h>
 
-int main()
+int main(void)
 {
   // Initializes the screen so we can print text
   init_scr();
