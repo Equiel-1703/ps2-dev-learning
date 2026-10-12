@@ -8,7 +8,9 @@
 
 EE_BIN = helloworld-pads.elf
 EE_OBJS = helloworld-pads.o
-EE_LIBS = -ldebug -lpad -lc -lgraph
+EE_LIBS = -ldebug -lpad -lgraph $(LIBC)
+
+.PHONY: all clean
 
 all: $(EE_BIN)
 
