@@ -6,8 +6,8 @@
 # Licenced under Academic Free License version 2.0
 # Review ps2sdk README & LICENSE files for further details.
 
-EE_BIN = helloworld-pads.elf
-EE_OBJS = helloworld-pads.o
+EE_BIN = dualshock-io.elf
+EE_OBJS = dualshock-io.o
 EE_LIBS = -ldebug -lpad -lgraph $(LIBC)
 
 .PHONY: all clean
