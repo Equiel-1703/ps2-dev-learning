@@ -1,35 +1,11 @@
 #include <debug.h>
 #include <kernel.h>
-#include <loadfile.h>
-#include <sifrpc.h>
-#include <tamtypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #define BUFFER_SIZE 64
 
-void initialize_iop()
-{
-  // int ret;
-
-  // Initialize the Remote Procedure Call system to talk to the IOP
-  SifInitRpc(0);
-
-  // Since we will load the text file from the host, we don't need
-  // to load any special modules in the IOP. However, it is always a
-  // good idea to initialize the protocol anyway to avoid bugs.
-
-  /*
-  ret = SifLoadModule("rom0:SIO2MAN", 0, NULL);
-
-  if (ret < 0) {
-    scr_printf("Failed to load SIO2MAN! (%d)", ret);
-    SleepThread();
-  }
-  */
-}
-
-int main()
+int main(void)
 {
   // Variable to hold return values
   int ret;
@@ -37,11 +13,7 @@ int main()
   // Initialize the screen for debug
   init_scr();
 
-  scr_printf("-- Loading file example in PS2 --\n");
-
-  scr_printf("\nInitializing IOP...\n");
-  initialize_iop();
-  scr_printf("IOP initialized successfully!\n");
+  scr_printf("-- Loading file example in PS2 --\n\n");
 
   FILE *fp = fopen("host:message.txt", "r");
   if (fp == NULL)
@@ -75,6 +47,7 @@ int main()
   {
     scr_printf("\n\n-- End of file --\n");
   }
+
   // -------
   
   ret = fclose(fp);
