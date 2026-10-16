@@ -25,7 +25,7 @@ typedef struct _square
   u64 color;
 } Square;
 
-static void draw_square(GSGLOBAL *gs, Square *sq)
+static void draw_square(GSGLOBAL *gs, const Square *sq)
 {
   gsKit_prim_sprite(gs, 
     sq->x, sq->y,
@@ -36,8 +36,7 @@ static void draw_square(GSGLOBAL *gs, Square *sq)
 
 static void process_inputs_square(struct padButtonStatus *buttons, Square *sq)
 {
-  static int buttons_status;
-  buttons_status = 0xFFFF ^ buttons->btns;
+  int buttons_status = 0xFFFF ^ buttons->btns;
 
   if (buttons_status & PAD_UP)
   {
@@ -54,6 +53,36 @@ static void process_inputs_square(struct padButtonStatus *buttons, Square *sq)
   if (buttons_status & PAD_RIGHT)
   {
     sq->x += SQUARE_SPEED;
+  }
+}
+
+static void init_iop_and_load_modules(void)
+{
+  // Init EE-side RPC protocol to talk to the IOP
+  SifInitRpc(0);
+
+  // Asks IOP to reset
+  while(!SifIopReset("", 0));
+  // Busy wait until IOP complete it's reboot
+  while(!SifIopSync());
+
+  // Re-init RPC protocol communication with fresh booted IOP
+  SifInitRpc(0);
+
+  int ret;
+
+  ret = SifLoadModule("rom0:SIO2MAN", 0, NULL);
+  if (ret < 0)
+  {
+    printf("Error loading SIO2MAN module from rom0.\n");
+    SleepThread();
+  }
+
+  ret = SifLoadModule("rom0:PADMAN", 0, NULL);
+  if (ret < 0)
+  {
+    printf("Error loading PADMAN module from rom0.\n");
+    SleepThread();
   }
 }
 
@@ -91,36 +120,6 @@ static GSGLOBAL *init_gs(void)
   return gsGlobal;
 }
 
-static void init_iop_and_load_modules(void)
-{
-  // Init EE-side RPC protocol to talk to the IOP
-  sceSifInitRpc(0);
-
-  // Asks IOP to reset
-  while(!SifIopReset("", 0));
-  // Busy wait until IOP complete it's reboot
-  while(!SifIopSync());
-
-  // Re-init RPC protocol communication with fresh booted IOP
-  sceSifInitRpc(0);
-
-  int ret;
-
-  ret = SifLoadModule("rom0:SIO2MAN", 0, NULL);
-  if (ret < 0)
-  {
-    printf("Error loading SIO2MAN module from rom0.\n");
-    SleepThread();
-  }
-
-  ret = SifLoadModule("rom0:PADMAN", 0, NULL);
-  if (ret < 0)
-  {
-    printf("Error loading PADMAN module from rom0.\n");
-    SleepThread();
-  }
-}
-
 static void init_libpad(void)
 {
   int ret;
@@ -145,45 +144,30 @@ static void init_libpad(void)
   }
 }
 
-static void read_pads(struct padButtonStatus *buttons)
+// This function returns 1 if it could read pad(0,0) successfully
+static u8 read_pads(struct padButtonStatus *buttons)
 {
-  static int ret, last_state;
-  
-  // Get the current status of the controller using DMA
-  ret = padGetState(0, 0);
-  last_state = -1;
-  // We will only read if the controller is fully connected and stable
-  while (ret != PAD_STATE_STABLE)
-  {
-    if (ret != last_state)
-    {
-      if (ret == PAD_STATE_DISCONN)
-      {
-        printf("Pad(0, 0) is disconnected!\n");
-      }
-    }
-    last_state = ret;
-    ret = padGetState(0, 0);
+  // Get the current status of the controller
+  int state = padGetState(0, 0);
 
-    gsKit_vsync_wait();
+  // If the pad is not stable, we don't read it and return 0
+  if (state != PAD_STATE_STABLE)
+  {
+    return 0;
   }
 
-  // Read the data into our 'buttons' struct
-  ret = padRead(0, 0, buttons);
-  if (ret == 0)
-  {
-    printf("Failed to read pads: %d\n", ret);
-  }
+  // If the pad is stable, we read the state and return 1
+  return padRead(0, 0, buttons) != 0;
 }
 
 int main(void)
 {
+  // Initializes the IO processor and loads required modules
+  init_iop_and_load_modules();
   // Initialize EE DMAC
   init_dmac();
   // Initialize the GS with our settings
   GSGLOBAL *gsGlobal = init_gs();
-  // Initializes the IO processor and loads required modules
-  init_iop_and_load_modules();
 
   // Initialize libpad and allocate buttons structure
   init_libpad();
@@ -206,8 +190,10 @@ int main(void)
 
   while (1)
   {
-    read_pads(&buttons);
-    process_inputs_square(&buttons, &sq);
+    if (read_pads(&buttons))
+    {
+      process_inputs_square(&buttons, &sq);
+    }
     
     // Draw the square
     draw_square(gsGlobal, &sq);
