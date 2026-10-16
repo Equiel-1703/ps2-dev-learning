@@ -11,8 +11,8 @@ EE_OBJS = basic-gs.o
 EE_LIBS = -ldebug -lc -lgskit -ldmakit
 
 # For gsKit
-EE_INCS = -I$(PS2DEV)/gsKit/include
-EE_LDFLAGS = -L$(PS2DEV)/gsKit/lib
+EE_INCS = -I$(GSKIT)/include
+EE_LDFLAGS = -L$(GSKIT)/lib
 
 .PHONY: all clean
 
