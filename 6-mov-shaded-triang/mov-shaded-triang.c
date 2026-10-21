@@ -71,7 +71,7 @@ static float sign(const float val)
   }
 }
 
-static float calculate_triang_velocity(const float dir, const float curr_vel, const float dt)
+static float calculate_square_velocity(const float dir, const float curr_vel, const float dt)
 {
   float new_vel;
 
@@ -87,7 +87,7 @@ static float calculate_triang_velocity(const float dir, const float curr_vel, co
   }
 }
 
-static void update_triangle_pos(const Input *in, Triangle *t)
+static void update_square(const Input *in, Triangle *t)
 {
   // Since I KNOW this is running in NTSC at 60Hz (synchronized by vsync), I
   // can assume a constant delta time of 0.0167 (1/60). In a more complex app
@@ -96,8 +96,8 @@ static void update_triangle_pos(const Input *in, Triangle *t)
   const float dt = 0.0167f;
 
   // Calculating velocities
-  t->velocity_x = calculate_triang_velocity(in->dir_x, t->velocity_x, dt);
-  t->velocity_y = calculate_triang_velocity(in->dir_y, t->velocity_y, dt);
+  t->velocity_x = calculate_square_velocity(in->dir_x, t->velocity_x, dt);
+  t->velocity_y = calculate_square_velocity(in->dir_y, t->velocity_y, dt);
 
   // Clamping velocities so diagonals aren't faster
   float total_speed = sqrtf(t->velocity_x * t->velocity_x + t->velocity_y * t->velocity_y);
@@ -113,7 +113,7 @@ static void update_triangle_pos(const Input *in, Triangle *t)
   t->y += t->velocity_y * dt;
 }
 
-static void draw_triangle(GSGLOBAL *gs, const Triangle *t)
+static void draw_square(GSGLOBAL *gs, const Triangle *t)
 {
   gsKit_prim_triangle_gouraud(
     gs,
@@ -303,10 +303,10 @@ int main(void)
       get_input_from_buttons(&buttons, &in);
     }
 
-    update_triangle_pos(&in, &t);
+    update_square(&in, &t);
     
     // Draw the triangle
-    draw_triangle(gsGlobal, &t);
+    draw_square(gsGlobal, &t);
 
     // Flush the queued commands to the GS via DMA
     gsKit_queue_exec(gsGlobal);
