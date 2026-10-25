@@ -8,11 +8,13 @@
 
 EE_BIN = mov-textured-square.elf
 EE_OBJS = mov-textured-square.o
-EE_LIBS = -ldebug -lc -lgskit_toolkit -lgskit -ldmakit -lpad
+EE_LIBS = -ldebug -lpng -lz -lc -lpad -lgskit_toolkit -lgskit -ldmakit
 
-# For gsKit
-EE_INCS = -I$(GSKIT)/include
-EE_LDFLAGS = -L$(GSKIT)/lib
+# gsKit headers and PS2SDK ports headers
+EE_INCS = -I$(GSKIT)/include -I$(PS2SDK)/ports/include
+
+# gsKit libraries and PS2SDK ports libraries (containing the PNG libs)
+EE_LDFLAGS = -L$(GSKIT)/lib -L$(PS2SDK)/ports/lib
 
 .PHONY: all clean run
 

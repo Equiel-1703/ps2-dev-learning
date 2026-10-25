@@ -15,9 +15,11 @@
 #define SCREEN_WIDTH        640
 #define SCREEN_HEIGHT       448
 
-#define COLOR_BLACK         GS_SETREG_RGBAQ(0, 0, 0, 0x80, 0)
+// 0x80 = transparent
+// 0x00 = opaque
+#define COLOR_BLUE          GS_SETREG_RGBAQ(0, 64, 211, 0, 0)
 #define TEXTURE_COLOR       GS_SETREG_RGBAQ(0x80, 0x80, 0x80, 0x80, 0)
-#define TEXTURE_PATH        "img/sia.bmp"
+#define TEXTURE_PATH        "img/sia.png"
 
 #define SQUARE_SIZE         128.0f
 #define SQUARE_MIN_SIZE     10.0f
@@ -232,7 +234,7 @@ static GSGLOBAL *init_gs(void)
   gsGlobal->DoubleBuffering = GS_SETTING_ON;  // use double buffer
   gsGlobal->ZBuffering = GS_SETTING_OFF;      // do not allocate/use a depth buffer
   gsGlobal->PSMZ = GS_PSMZ_16S;               // depth buffer format (unused here)
-  gsGlobal->PrimAlphaEnable = GS_SETTING_OFF; // disable primitive alpha blending
+  gsGlobal->PrimAlphaEnable = GS_SETTING_ON;  // Enable primitive alpha blending
 
   gsKit_init_screen(gsGlobal);
 
@@ -321,15 +323,16 @@ int main(void)
   memset(&sq_tex, 0, sizeof(GSTEXTURE));
   
   sq_tex.Delayed = 1;
-  if (gsKit_texture_bmp(gsGlobal, &sq_tex, TEXTURE_PATH) < 0)
+  if (gsKit_texture_png(gsGlobal, &sq_tex, TEXTURE_PATH) < 0)
   {
-    printf("Failed to load image from %s\n", TEXTURE_PATH);
+    printf("Failed to load image from '%s'\n", TEXTURE_PATH);
     SleepThread();
   }
-  sq_tex.Filter = GS_FILTER_LINEAR;
+  sq_tex.Filter = GS_FILTER_NEAREST;
 
   printf("Loaded texture size: %d x %d\n", sq_tex.Width, sq_tex.Height);
   printf("Texture filter: %s\n", sq_tex.Filter == GS_FILTER_NEAREST ? "Nearest" : "Linear");
+  printf("PSM: %s\n", sq_tex.PSM == GS_PSM_CT32 ? "CT32" : "other"); 
 
   // Creating our square in the middle of the screen
   Square sq = {
@@ -341,20 +344,23 @@ int main(void)
       .velocity_y = 0
   };
 
-  // Set up the persistent queue to always clear the screen
-  gsKit_mode_switch(gsGlobal, GS_PERSISTENT);
-  gsKit_clear(gsGlobal, COLOR_BLACK);
-
-  // Go back to one-shot queue
+  // Enter one-shot queue
   gsKit_mode_switch(gsGlobal, GS_ONESHOT);
+
+  // Set blending equation: (Cd - Cs) * As + Cs
+  // Cd - Color Destination (canvas)
+  // Cs - Color Source (the texture)
+  // As - Alpha Source (texture alpha)
+  gsKit_set_primalpha(gsGlobal, GS_BLEND_BACK2FRONT, 0);
 
   // Initialize texture manager
   gsKit_TexManager_init(gsGlobal);
 
   while (1)
   {
-    reset_input_struct(&in);
+    gsKit_clear(gsGlobal, COLOR_BLUE);
 
+    reset_input_struct(&in);
     if (read_pads(&buttons))
     {
       get_input_from_buttons(&buttons, &in);
@@ -363,7 +369,7 @@ int main(void)
     
     // Draw the square
     draw_square(gsGlobal, &sq);
-
+    
     // Flush the queued commands to the GS via DMA
     gsKit_queue_exec(gsGlobal);
     // Wait for the queue to render
